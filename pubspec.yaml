@@ -1,5 +1,5 @@
-name: my_apple_app
-description: 个人使用的 iOS App
+name: whisper_ios
+description: Whisper 卡密管理客户端
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,6 +13,7 @@ dependencies:
   dio: ^5.4.0
   shared_preferences: ^2.2.2
   intl: ^0.19.0
+  fl_chart: ^0.70.0
 
 dev_dependencies:
   flutter_test:
@@ -21,3 +22,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/logo.png
