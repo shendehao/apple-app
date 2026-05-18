@@ -43,9 +43,9 @@ class _CardBatchCreatePageState extends State<CardBatchCreatePage> {
         prefix: _prefixCtrl.text.trim().isEmpty ? null : _prefixCtrl.text.trim(),
         unbindLimit: _noLimit ? null : int.tryParse(_unbindCtrl.text.trim()));
       if (mounted) {
-        if (resp['code'] == 0 && resp['data'] != null) {
-          setState(() { _keys = List<String>.from(resp['data']['keys'] ?? []); _loading = false; });
-        } else { _toast(resp['msg'] ?? '失败'); setState(() => _loading = false); }
+        if (resp['code'] == 0 && resp['keys'] != null) {
+          setState(() { _keys = List<String>.from(resp['keys']); _loading = false; });
+        } else { _toast(resp['message'] ?? resp['msg'] ?? '失败'); setState(() => _loading = false); }
       }
     } catch (e) { if (mounted) { _toast('网络错误'); setState(() => _loading = false); } }
   }

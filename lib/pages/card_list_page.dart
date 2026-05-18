@@ -120,20 +120,45 @@ class _CardListPageState extends State<CardListPage> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: CupertinoSearchTextField(controller: _searchController, onChanged: (_) => _loadCards(), placeholder: '搜索卡密'),
+            child: Container(
+              height: 38,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => _loadCards(),
+                style: const TextStyle(fontSize: 15, color: Color(0xFF1C1C1E)),
+                decoration: InputDecoration(
+                  hintText: '搜索卡密', hintStyle: const TextStyle(color: Color(0xFFC7C7CC), fontSize: 15),
+                  prefixIcon: const Icon(CupertinoIcons.search, size: 18, color: Color(0xFF8E8E93)),
+                  border: InputBorder.none, isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: SizedBox(width: double.infinity, child: CupertinoSlidingSegmentedControl<String>(
-              groupValue: _statusFilter,
-              children: const {
-                '': Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Text('全部', style: TextStyle(fontSize: 13))),
-                'unused': Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Text('未使用', style: TextStyle(fontSize: 13))),
-                'used': Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Text('已使用', style: TextStyle(fontSize: 13))),
-                'banned': Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Text('封禁', style: TextStyle(fontSize: 13))),
-              },
-              onValueChanged: (val) { setState(() => _statusFilter = val ?? ''); _loadCards(); },
-            )),
+            child: Container(
+              height: 32,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+              child: Row(children: ['', 'unused', 'used', 'banned'].map((s) {
+                final labels = {'': '全部', 'unused': '未使用', 'used': '已使用', 'banned': '封禁'};
+                final isActive = _statusFilter == s;
+                return Expanded(child: GestureDetector(
+                  onTap: () { setState(() => _statusFilter = s); _loadCards(); },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: isActive ? const Color(0xFF007AFF) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(labels[s]!, style: TextStyle(fontSize: 13, fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: isActive ? Colors.white : const Color(0xFF8E8E93))),
+                  ),
+                ));
+              }).toList()),
+            ),
           ),
           Expanded(
             child: _isLoading

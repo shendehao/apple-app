@@ -1,4 +1,5 @@
 ﻿import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dashboard_page.dart';
@@ -11,97 +12,74 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
+class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
-  late final List<Widget> _pages;
-  late AnimationController _glowController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pages = const [DashboardPage(), CardListPage(), SettingsPage()];
-    _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-  }
-
-  @override
-  void dispose() { _glowController.dispose(); super.dispose(); }
-
-  void _onTabTap(int index) {
-    if (index == _currentIndex) return;
-    setState(() => _currentIndex = index);
-    _glowController.forward(from: 0);
-  }
+  final _pages = const [DashboardPage(), CardListPage(), SettingsPage()];
 
   @override
   Widget build(BuildContext context) {
+    // iOS真机: 使用原生CupertinoTabScaffold (iOS 26自动获得液态玻璃)
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      return CupertinoTabScaffold(
+        tabBar: CupertinoTabBar(
+          currentIndex: _currentIndex,
+          onTap: (i) => setState(() => _currentIndex = i),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(CupertinoIcons.chart_bar), activeIcon: Icon(CupertinoIcons.chart_bar_fill), label: '概览'),
+            BottomNavigationBarItem(icon: Icon(CupertinoIcons.creditcard), activeIcon: Icon(CupertinoIcons.creditcard_fill), label: '卡密'),
+            BottomNavigationBarItem(icon: Icon(CupertinoIcons.gear_alt), activeIcon: Icon(CupertinoIcons.gear_alt_fill), label: '设置'),
+          ],
+        ),
+        tabBuilder: (context, index) => CupertinoTabView(builder: (_) => _pages[index]),
+      );
+    }
+
+    // Web/其他: 自定义模拟iOS 26深色液态玻璃导航栏
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: _LiquidGlassNavBar(
+      bottomNavigationBar: _SimulatedGlassBar(
         currentIndex: _currentIndex,
-        onTap: _onTabTap,
-        glowController: _glowController,
-        items: const [
-          _NavItem(icon: CupertinoIcons.chart_bar, activeIcon: CupertinoIcons.chart_bar_fill, label: '概览'),
-          _NavItem(icon: CupertinoIcons.creditcard, activeIcon: CupertinoIcons.creditcard_fill, label: '卡密'),
-          _NavItem(icon: CupertinoIcons.gear_alt, activeIcon: CupertinoIcons.gear_alt_fill, label: '设置'),
-        ],
+        onTap: (i) => setState(() => _currentIndex = i),
       ),
     );
   }
 }
 
-class _NavItem {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  const _NavItem({required this.icon, required this.activeIcon, required this.label});
-}
-
-class _LiquidGlassNavBar extends StatelessWidget {
+/// Web端模拟iOS 26液态玻璃导航栏
+class _SimulatedGlassBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-  final AnimationController glowController;
-  final List<_NavItem> items;
-
-  const _LiquidGlassNavBar({required this.currentIndex, required this.onTap, required this.glowController, required this.items});
+  const _SimulatedGlassBar({required this.currentIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    return Container(
-      margin: EdgeInsets.fromLTRB(48, 0, 48, bottomPadding + 12),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(60, 0, 60, bottomPadding + 16),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(32),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: AnimatedBuilder(
-            animation: glowController,
-            builder: (context, child) {
-              final glow = CurvedAnimation(parent: glowController, curve: Curves.easeOut).value;
-              return Container(
-                height: 64,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withOpacity(0.78 + glow * 0.08),
-                      Colors.white.withOpacity(0.62),
-                    ],
-                  ),
-                  border: Border.all(color: Colors.white.withOpacity(0.5 + glow * 0.15), width: 0.8),
-                  boxShadow: [
-                    BoxShadow(color: const Color(0xFF007AFF).withOpacity(0.06 + glow * 0.06), blurRadius: 20 + glow * 10, spreadRadius: -2, offset: const Offset(0, 4)),
-                    BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 2)),
-                  ],
-                ),
-                child: child,
-              );
-            },
+          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+          child: Container(
+            height: 62,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              color: const Color(0xFF1C1C1E).withOpacity(0.75),
+              border: Border.all(color: Colors.white.withOpacity(0.08), width: 0.5),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+              ],
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(items.length, (i) => _GlassNavButton(item: items[i], isActive: i == currentIndex, onTap: () => onTap(i))),
+              children: List.generate(3, (i) => _TabBtn(
+                icon: [CupertinoIcons.chart_bar, CupertinoIcons.creditcard, CupertinoIcons.gear_alt][i],
+                activeIcon: [CupertinoIcons.chart_bar_fill, CupertinoIcons.creditcard_fill, CupertinoIcons.gear_alt_fill][i],
+                label: ['概览', '卡密', '设置'][i],
+                isActive: i == currentIndex,
+                onTap: () => onTap(i),
+              )),
             ),
           ),
         ),
@@ -110,51 +88,30 @@ class _LiquidGlassNavBar extends StatelessWidget {
   }
 }
 
-class _GlassNavButton extends StatefulWidget {
-  final _NavItem item;
+class _TabBtn extends StatelessWidget {
+  final IconData icon, activeIcon;
+  final String label;
   final bool isActive;
   final VoidCallback onTap;
-  const _GlassNavButton({required this.item, required this.isActive, required this.onTap});
-  @override
-  State<_GlassNavButton> createState() => _GlassNavButtonState();
-}
-
-class _GlassNavButtonState extends State<_GlassNavButton> with SingleTickerProviderStateMixin {
-  late AnimationController _scaleCtrl;
-
-  @override
-  void initState() { super.initState(); _scaleCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 150), lowerBound: 0.0, upperBound: 0.1); }
-  @override
-  void dispose() { _scaleCtrl.dispose(); super.dispose(); }
+  const _TabBtn({required this.icon, required this.activeIcon, required this.label, required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    const active = Color(0xFF007AFF);
-    const inactive = Color(0xFF8E8E93);
     return GestureDetector(
-      onTapDown: (_) => _scaleCtrl.forward(),
-      onTapUp: (_) { _scaleCtrl.reverse(); widget.onTap(); },
-      onTapCancel: () => _scaleCtrl.reverse(),
-      child: AnimatedBuilder(
-        animation: _scaleCtrl,
-        builder: (_, child) => Transform.scale(scale: 1 - _scaleCtrl.value, child: child),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: widget.isActive ? active.withOpacity(0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(widget.isActive ? widget.item.activeIcon : widget.item.icon, key: ValueKey(widget.isActive), size: 24, color: widget.isActive ? active : inactive),
-            ),
-            const SizedBox(height: 2),
-            Text(widget.item.label, style: TextStyle(fontSize: 10, fontWeight: widget.isActive ? FontWeight.w600 : FontWeight.w400, color: widget.isActive ? active : inactive)),
-          ]),
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        width: 64, height: 50,
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
         ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(isActive ? activeIcon : icon, size: 22, color: isActive ? const Color(0xFF0A84FF) : Colors.white.withOpacity(0.5)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 10, fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: isActive ? const Color(0xFF0A84FF) : Colors.white.withOpacity(0.5))),
+        ]),
       ),
     );
   }
