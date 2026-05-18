@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -55,7 +56,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: ThemeMode.system,
-      home: const NoteListPage(),
+      home: const MainShell(),
     );
   }
 }
@@ -795,6 +796,371 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ==================== 液态玻璃主框架 ====================
+
+class MainShell extends StatefulWidget {
+  const MainShell({super.key});
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
+  int _currentIndex = 0;
+  late final List<Widget> _pages;
+  late AnimationController _glowController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const NoteListPage(),
+      const SettingsPage(),
+    ];
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  void _onTabTap(int index) {
+    if (index == _currentIndex) return;
+    setState(() => _currentIndex = index);
+    _glowController.forward(from: 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBody: true,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: _LiquidGlassNavBar(
+        currentIndex: _currentIndex,
+        onTap: _onTabTap,
+        glowController: _glowController,
+        items: const [
+          _NavItem(icon: Icons.edit_note_rounded, activeIcon: Icons.edit_note, label: '笔记'),
+          _NavItem(icon: Icons.settings_outlined, activeIcon: Icons.settings, label: '设置'),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  const _NavItem({required this.icon, required this.activeIcon, required this.label});
+}
+
+// ==================== 液态玻璃导航栏 ====================
+
+class _LiquidGlassNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  final AnimationController glowController;
+  final List<_NavItem> items;
+
+  const _LiquidGlassNavBar({
+    required this.currentIndex,
+    required this.onTap,
+    required this.glowController,
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(60, 0, 60, bottomPadding + 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: AnimatedBuilder(
+            animation: glowController,
+            builder: (context, child) {
+              final glowValue = CurvedAnimation(
+                parent: glowController,
+                curve: Curves.easeOut,
+              ).value;
+              return Container(
+                height: 64,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: isDark
+                        ? [
+                            Colors.white.withOpacity(0.12 + glowValue * 0.05),
+                            Colors.white.withOpacity(0.06),
+                          ]
+                        : [
+                            Colors.white.withOpacity(0.75 + glowValue * 0.1),
+                            Colors.white.withOpacity(0.55),
+                          ],
+                  ),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.15 + glowValue * 0.1)
+                        : Colors.white.withOpacity(0.6 + glowValue * 0.2),
+                    width: 0.8,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: cs.primary.withOpacity(0.08 + glowValue * 0.08),
+                      blurRadius: 20 + glowValue * 10,
+                      spreadRadius: -2,
+                      offset: const Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: child,
+              );
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(items.length, (i) {
+                final isActive = i == currentIndex;
+                return _GlassNavButton(
+                  item: items[i],
+                  isActive: isActive,
+                  onTap: () => onTap(i),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassNavButton extends StatefulWidget {
+  final _NavItem item;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _GlassNavButton({
+    required this.item,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  State<_GlassNavButton> createState() => _GlassNavButtonState();
+}
+
+class _GlassNavButtonState extends State<_GlassNavButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _scaleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+      lowerBound: 0.0,
+      upperBound: 0.1,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTapDown: (_) => _scaleController.forward(),
+      onTapUp: (_) {
+        _scaleController.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _scaleController.reverse(),
+      child: AnimatedBuilder(
+        animation: _scaleController,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: 1 - _scaleController.value,
+            child: child,
+          );
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          decoration: BoxDecoration(
+            color: widget.isActive
+                ? cs.primary.withOpacity(0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  widget.isActive ? widget.item.activeIcon : widget.item.icon,
+                  key: ValueKey(widget.isActive),
+                  size: 24,
+                  color: widget.isActive
+                      ? cs.primary
+                      : cs.onSurface.withOpacity(0.45),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                widget.item.label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: widget.isActive ? FontWeight.w600 : FontWeight.w400,
+                  color: widget.isActive
+                      ? cs.primary
+                      : cs.onSurface.withOpacity(0.45),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== 设置页 ====================
+
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: cs.surface,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text(
+              '设置',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _SettingsCard(
+              children: [
+                _SettingsTile(
+                  icon: Icons.cloud_outlined,
+                  title: '服务器同步',
+                  subtitle: '连接你的服务器',
+                  onTap: () {},
+                ),
+                _SettingsTile(
+                  icon: Icons.color_lens_outlined,
+                  title: '外观',
+                  subtitle: '跟随系统',
+                  onTap: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _SettingsCard(
+              children: [
+                _SettingsTile(
+                  icon: Icons.info_outline_rounded,
+                  title: '关于',
+                  subtitle: '版本 1.0.0',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  final List<Widget> children;
+  const _SettingsCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: List.generate(children.length * 2 - 1, (i) {
+          if (i.isOdd) {
+            return Divider(height: 1, indent: 56, color: cs.outlineVariant.withOpacity(0.3));
+          }
+          return children[i ~/ 2];
+        }),
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Icon(icon, color: cs.primary),
+      title: Text(title),
+      subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.5))),
+      trailing: Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.3)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      onTap: onTap,
     );
   }
 }
