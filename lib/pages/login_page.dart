@@ -48,7 +48,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     final ok = await _authService.login(AppConfig.defaultServerUrl, u, p);
     if (!mounted) return;
     if (ok) {
-      Navigator.of(context).pushReplacement(CupertinoPageRoute(builder: (_) => const MainShell()));
+      Navigator.of(context, rootNavigator: true).pushReplacement(CupertinoPageRoute(builder: (_) => const MainShell()));
     } else {
       setState(() { _isLoading = false; _error = '账号或密码错误'; });
     }

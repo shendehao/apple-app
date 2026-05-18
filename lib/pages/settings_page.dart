@@ -38,7 +38,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     if (confirm == true) {
       await _authService.logout();
-      if (mounted) Navigator.of(context).pushAndRemoveUntil(CupertinoPageRoute(builder: (_) => const LoginPage()), (_) => false);
+      if (mounted) Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(CupertinoPageRoute(builder: (_) => const LoginPage()), (_) => false);
     }
   }
 
