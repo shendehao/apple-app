@@ -15,15 +15,20 @@ class _DashboardPageState extends State<DashboardPage> {
   DashboardStats? _stats;
   List<SoftwareModel> _softwareList = [];
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
-    final stats = await _service.getStats();
-    final software = await _service.getSoftwareList();
-    if (mounted) setState(() { _stats = stats; _softwareList = software; _isLoading = false; });
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final stats = await _service.getStats();
+      final software = await _service.getSoftwareList();
+      if (mounted) setState(() { _stats = stats; _softwareList = software; _isLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _isLoading = false; _error = '加载失败，下拉重试'; });
+    }
   }
 
   String get _greeting {
@@ -47,7 +52,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 onRefresh: _load,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 500),
@@ -74,9 +79,15 @@ class _DashboardPageState extends State<DashboardPage> {
                             const SizedBox(height: 12),
                             // Bottom row
                             Row(children: [
-                              Expanded(child: _StatCard(title: '软件实例', value: '${_stats!.totalSoftware}', color: const Color(0xFF5856D6), icon: CupertinoIcons.cube_box_fill)),
+                              Expanded(child: _StatCard(title: '已过期', value: '${_stats!.expiredCards}', color: const Color(0xFFFF9500), icon: CupertinoIcons.clock_fill)),
                               const SizedBox(width: 12),
+                              Expanded(child: _StatCard(title: '软件实例', value: '${_stats!.totalSoftware}', color: const Color(0xFF5856D6), icon: CupertinoIcons.cube_box_fill)),
+                            ]),
+                            const SizedBox(height: 12),
+                            Row(children: [
                               Expanded(child: _StatCard(title: '今日事件', value: '${_stats!.todayEvents}', color: const Color(0xFFAF52DE), icon: CupertinoIcons.bolt_fill)),
+                              const SizedBox(width: 12),
+                              const Expanded(child: SizedBox()),
                             ]),
                           ],
 

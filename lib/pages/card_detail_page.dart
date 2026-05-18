@@ -1,4 +1,4 @@
-﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -15,12 +15,19 @@ class CardDetailPage extends StatefulWidget {
 class _CardDetailPageState extends State<CardDetailPage> {
   final _cardService = CardService();
   late CardModel _card;
+  bool _actionLoading = false;
+
   @override
   void initState() { super.initState(); _card = widget.card; }
 
-  void _showToast(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))));
+  void _showToast(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(msg), behavior: SnackBarBehavior.floating,
+    duration: const Duration(seconds: 1),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  ));
 
   Future<void> _toggleBan() async {
+    if (_actionLoading) return;
     final isBanned = _card.status == 'banned';
     final label = isBanned ? '启用' : '封禁';
     final confirm = await showCupertinoDialog<bool>(context: context, builder: (ctx) => CupertinoAlertDialog(
@@ -30,14 +37,32 @@ class _CardDetailPageState extends State<CardDetailPage> {
         CupertinoDialogAction(onPressed: () => Navigator.pop(ctx, true), isDestructiveAction: !isBanned, child: Text(label)),
       ],
     ));
-    if (confirm == true) {
-      await _cardService.batchStatus([_card.id], isBanned ? 'unused' : 'banned');
+    if (confirm != true) return;
+    setState(() => _actionLoading = true);
+    try {
+      final newStatus = isBanned ? 'unused' : 'banned';
+      await _cardService.batchStatus([_card.id], newStatus);
       _showToast('已$label');
-      if (mounted) Navigator.pop(context);
+      setState(() {
+        _card = CardModel(
+          id: _card.id, key: _card.key, status: newStatus,
+          hwid: _card.hwid, createdAt: _card.createdAt, activatedAt: _card.activatedAt,
+          lastSeen: _card.lastSeen, firstIp: _card.firstIp, lastIp: _card.lastIp,
+          expireDate: _card.expireDate, durationUnit: _card.durationUnit,
+          durationValue: _card.durationValue, unbindCount: _card.unbindCount,
+          unbindLimit: _card.unbindLimit, remarks: _card.remarks,
+          softwareId: _card.softwareId, softwareName: _card.softwareName,
+        );
+        _actionLoading = false;
+      });
+    } catch (e) {
+      _showToast('操作失败');
+      setState(() => _actionLoading = false);
     }
   }
 
   Future<void> _resetHwid() async {
+    if (_actionLoading) return;
     final confirm = await showCupertinoDialog<bool>(context: context, builder: (ctx) => CupertinoAlertDialog(
       title: const Text('重置机器码'), content: const Text('确定要重置该卡密的机器码绑定吗？'),
       actions: [
@@ -45,10 +70,47 @@ class _CardDetailPageState extends State<CardDetailPage> {
         CupertinoDialogAction(onPressed: () => Navigator.pop(ctx, true), isDestructiveAction: true, child: const Text('重置')),
       ],
     ));
-    if (confirm == true) {
+    if (confirm != true) return;
+    setState(() => _actionLoading = true);
+    try {
       await _cardService.resetHwid(_card.id);
       _showToast('机器码已重置');
+      setState(() {
+        _card = CardModel(
+          id: _card.id, key: _card.key, status: _card.status,
+          hwid: null, createdAt: _card.createdAt, activatedAt: _card.activatedAt,
+          lastSeen: _card.lastSeen, firstIp: _card.firstIp, lastIp: _card.lastIp,
+          expireDate: _card.expireDate, durationUnit: _card.durationUnit,
+          durationValue: _card.durationValue, unbindCount: _card.unbindCount,
+          unbindLimit: _card.unbindLimit, remarks: _card.remarks,
+          softwareId: _card.softwareId, softwareName: _card.softwareName,
+        );
+        _actionLoading = false;
+      });
+    } catch (e) {
+      _showToast('操作失败');
+      setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _deleteCard() async {
+    if (_actionLoading) return;
+    final confirm = await showCupertinoDialog<bool>(context: context, builder: (ctx) => CupertinoAlertDialog(
+      title: const Text('确认删除'), content: const Text('删除后不可恢复，确定要删除这张卡密吗？'),
+      actions: [
+        CupertinoDialogAction(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+        CupertinoDialogAction(onPressed: () => Navigator.pop(ctx, true), isDestructiveAction: true, child: const Text('删除')),
+      ],
+    ));
+    if (confirm != true) return;
+    setState(() => _actionLoading = true);
+    try {
+      await _cardService.deleteCards([_card.id]);
+      _showToast('已删除');
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      _showToast('删除失败');
+      setState(() => _actionLoading = false);
     }
   }
 
@@ -71,50 +133,80 @@ class _CardDetailPageState extends State<CardDetailPage> {
         backgroundColor: const Color(0xFFF2F2F7), elevation: 0, scrolledUnderElevation: 0,
         leading: CupertinoButton(padding: EdgeInsets.zero, child: const Icon(CupertinoIcons.back, color: Color(0xFF007AFF)), onPressed: () => Navigator.pop(context)),
         title: const Text('卡密详情', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Color(0xFF1C1C1E))), centerTitle: true,
+        actions: [
+          CupertinoButton(
+            padding: const EdgeInsets.only(right: 16),
+            onPressed: _actionLoading ? null : _deleteCard,
+            child: const Icon(CupertinoIcons.trash, color: Color(0xFFFF3B30), size: 20),
+          ),
+        ],
       ),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-          child: Row(children: [
-            Container(width: 48, height: 48, decoration: BoxDecoration(color: _statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-              child: Icon(CupertinoIcons.creditcard_fill, color: _statusColor, size: 24)),
-            const SizedBox(width: 16),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_card.statusLabel, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: _statusColor)),
-              const SizedBox(height: 2),
-              Text('${_card.softwareName ?? ""}  ${_card.typeLabel}', style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93))),
+      body: Stack(children: [
+        ListView(padding: const EdgeInsets.all(16), children: [
+          // Status header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+            child: Row(children: [
+              Container(width: 48, height: 48, decoration: BoxDecoration(color: _statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                child: Icon(CupertinoIcons.creditcard_fill, color: _statusColor, size: 24)),
+              const SizedBox(width: 16),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(_card.statusLabel, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: _statusColor)),
+                const SizedBox(height: 2),
+                Text('${_card.softwareName ?? ""}  ${_card.typeLabel}', style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93))),
+              ]),
             ]),
+          ),
+          const SizedBox(height: 16),
+
+          // Key info
+          _section([
+            _row('卡密 Key', _card.key, mono: true, copyable: true),
+            _row('机器码', _card.hwid ?? '-', mono: true, copyable: _card.hwid != null && _card.hwid!.isNotEmpty),
           ]),
-        ),
-        const SizedBox(height: 16),
-        _section([
-          _row('卡密 Key', _card.key, mono: true, copyable: true),
-          _row('机器码', _card.hwid ?? '-', mono: true, copyable: _card.hwid != null && _card.hwid!.isNotEmpty),
+          const SizedBox(height: 16),
+
+          // Details
+          _section([
+            _row('类型', _card.typeLabel),
+            _row('创建时间', _fmt(_card.createdAt)),
+            _row('到期时间', _card.expireDate != null ? _fmt(_card.expireDate) : '永久'),
+            _row('换绑次数', _card.unbindLimit != null ? '${_card.unbindCount} / ${_card.unbindLimit}' : '不限'),
+            _row('首次 IP', _card.firstIp ?? '-', mono: true),
+            _row('最后 IP', _card.lastIp ?? '-', mono: true),
+            _row('激活时间', _fmt(_card.activatedAt)),
+            _row('最后在线', _fmt(_card.lastSeen)),
+            if (_card.remarks != null && _card.remarks!.isNotEmpty) _row('备注', _card.remarks!),
+          ]),
+          const SizedBox(height: 24),
+
+          // Action buttons
+          Row(children: [
+            if (_card.hwid != null && _card.hwid!.isNotEmpty) ...[
+              Expanded(child: SizedBox(height: 48, child: CupertinoButton(
+                color: const Color(0xFFFF9500), borderRadius: BorderRadius.circular(12),
+                padding: EdgeInsets.zero, onPressed: _actionLoading ? null : _resetHwid,
+                child: const Text('重置机器码', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+              ))),
+              const SizedBox(width: 12),
+            ],
+            Expanded(child: SizedBox(height: 48, child: CupertinoButton(
+              color: _card.status == 'banned' ? const Color(0xFF34C759) : const Color(0xFFFF3B30),
+              borderRadius: BorderRadius.circular(12), padding: EdgeInsets.zero,
+              onPressed: _actionLoading ? null : _toggleBan,
+              child: Text(_card.status == 'banned' ? '启用' : '封禁', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+            ))),
+          ]),
+          const SizedBox(height: 40),
         ]),
-        const SizedBox(height: 16),
-        _section([
-          _row('类型', _card.typeLabel),
-          _row('到期时间', _card.expireDate != null ? _fmt(_card.expireDate) : '永久'),
-          _row('换绑次数', _card.unbindLimit != null ? '${_card.unbindCount} / ${_card.unbindLimit}' : '不限'),
-          _row('首次 IP', _card.firstIp ?? '-', mono: true),
-          _row('最后 IP', _card.lastIp ?? '-', mono: true),
-          _row('激活时间', _fmt(_card.activatedAt)),
-          _row('最后在线', _fmt(_card.lastSeen)),
-          if (_card.remarks != null && _card.remarks!.isNotEmpty) _row('备注', _card.remarks!),
-        ]),
-        const SizedBox(height: 24),
-        Row(children: [
-          if (_card.hwid != null && _card.hwid!.isNotEmpty) ...[
-            Expanded(child: SizedBox(height: 48, child: CupertinoButton(color: const Color(0xFFFF9500), borderRadius: BorderRadius.circular(12), padding: EdgeInsets.zero, onPressed: _resetHwid, child: const Text('重置机器码', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15))))),
-            const SizedBox(width: 12),
-          ],
-          Expanded(child: SizedBox(height: 48, child: CupertinoButton(
-            color: _card.status == 'banned' ? const Color(0xFF34C759) : const Color(0xFFFF3B30),
-            borderRadius: BorderRadius.circular(12), padding: EdgeInsets.zero, onPressed: _toggleBan,
-            child: Text(_card.status == 'banned' ? '启用' : '封禁', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15))))),
-        ]),
-        const SizedBox(height: 40),
+
+        // Loading overlay
+        if (_actionLoading)
+          Positioned.fill(child: Container(
+            color: Colors.black.withOpacity(0.1),
+            child: const Center(child: CupertinoActivityIndicator(radius: 14)),
+          )),
       ]),
     );
   }

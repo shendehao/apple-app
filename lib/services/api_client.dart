@@ -1,4 +1,5 @@
-﻿import 'package:dio/dio.dart';
+﻿import 'dart:ui';
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
 
@@ -6,6 +7,7 @@ class ApiClient {
   late Dio _dio;
   String? _token;
   String _baseUrl = AppConfig.defaultServerUrl;
+  VoidCallback? onUnauthorized;
 
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
@@ -33,6 +35,7 @@ class ApiClient {
       onError: (error, handler) {
         if (error.response?.statusCode == 401) {
           clearToken();
+          onUnauthorized?.call();
         }
         handler.next(error);
       },

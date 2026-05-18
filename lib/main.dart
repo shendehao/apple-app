@@ -1,8 +1,11 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'services/api_client.dart';
 import 'pages/login_page.dart';
 import 'pages/main_shell.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,6 +13,12 @@ void main() async {
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   );
   await ApiClient().init();
+  ApiClient().onUnauthorized = () {
+    navigatorKey.currentState?.pushAndRemoveUntil(
+      CupertinoPageRoute(builder: (_) => const LoginPage()),
+      (_) => false,
+    );
+  };
   runApp(const WhisperApp());
 }
 
@@ -20,10 +29,11 @@ class WhisperApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Whisper',
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5B6ABF),
+          seedColor: const Color(0xFF007AFF),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -34,14 +44,7 @@ class WhisperApp extends StatelessWidget {
           scrolledUnderElevation: 0,
         ),
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5B6ABF),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
       home: ApiClient().isLoggedIn ? const MainShell() : const LoginPage(),
     );
   }

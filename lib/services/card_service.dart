@@ -62,4 +62,9 @@ class CardService {
   Future<Map<String, dynamic>> resetHwid(int cardId) async {
     return await _api.post('/cards/$cardId/reset-hwid');
   }
+
+  /// Delete cards
+  Future<Map<String, dynamic>> deleteCards(List<int> cardIds) async {
+    return await _api.delete('/cards', params: {'card_ids': cardIds});
+  }
 }
