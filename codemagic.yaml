@@ -6,7 +6,7 @@ workflows:
     environment:
       ios_signing:
         distribution_type: ad_hoc
-        bundle_identifier: com.example.myapp  # 改成你的 Bundle ID
+        bundle_identifier: com.durian711.apple315
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -22,7 +22,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - your-email@example.com  # 改成你的邮箱
+          - 3371574658@qq.com
         notify:
           success: true
           failure: true

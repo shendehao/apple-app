@@ -21,3 +21,9 @@ android/local.properties
 # Misc
 *.log
 .DS_Store
+
+# Certificates (敏感文件不要上传)
+*.p12
+*.mobileprovision
+*.zip
+cert_temp/
