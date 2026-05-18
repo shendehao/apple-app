@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'services/api_client.dart';
 import 'pages/login_page.dart';
 import 'pages/main_shell.dart';
@@ -30,6 +31,7 @@ class WhisperApp extends StatelessWidget {
     return MaterialApp(
       title: 'Whisper',
       navigatorKey: navigatorKey,
+      navigatorObservers: [CNTabBarRouteObserver()],
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

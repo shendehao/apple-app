@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'dashboard_page.dart';
 import 'card_list_page.dart';
 import 'settings_page.dart';
@@ -18,23 +19,36 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    // iOS真机: 使用原生CupertinoTabScaffold (iOS 26自动获得液态玻璃)
+    // iOS: 使用原生液态玻璃 CNTabBar (iOS 26+ 自动渲染原生效果, 旧版降级)
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-      return CupertinoTabScaffold(
-        tabBar: CupertinoTabBar(
+      return Scaffold(
+        extendBody: true,
+        body: IndexedStack(index: _currentIndex, children: _pages),
+        bottomNavigationBar: CNTabBar(
+          items: [
+            CNTabBarItem(
+              label: '概览',
+              icon: CNSymbol('chart.bar', size: 22),
+              activeIcon: CNSymbol('chart.bar.fill', size: 22),
+            ),
+            CNTabBarItem(
+              label: '卡密',
+              icon: CNSymbol('creditcard', size: 22),
+              activeIcon: CNSymbol('creditcard.fill', size: 22),
+            ),
+            CNTabBarItem(
+              label: '设置',
+              icon: CNSymbol('gearshape', size: 22),
+              activeIcon: CNSymbol('gearshape.fill', size: 22),
+            ),
+          ],
           currentIndex: _currentIndex,
           onTap: (i) => setState(() => _currentIndex = i),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(CupertinoIcons.chart_bar), activeIcon: Icon(CupertinoIcons.chart_bar_fill), label: '概览'),
-            BottomNavigationBarItem(icon: Icon(CupertinoIcons.creditcard), activeIcon: Icon(CupertinoIcons.creditcard_fill), label: '卡密'),
-            BottomNavigationBarItem(icon: Icon(CupertinoIcons.gear_alt), activeIcon: Icon(CupertinoIcons.gear_alt_fill), label: '设置'),
-          ],
         ),
-        tabBuilder: (context, index) => CupertinoTabView(builder: (_) => _pages[index]),
       );
     }
 
-    // Web/其他: 自定义模拟iOS 26深色液态玻璃导航栏
+    // Web/Android: 自定义模拟液态玻璃导航栏
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _pages),
@@ -46,7 +60,7 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-/// Web端模拟iOS 26液态玻璃导航栏
+/// 非iOS平台模拟液态玻璃导航栏
 class _SimulatedGlassBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
