@@ -11,14 +11,21 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
+      - name: Generate iOS project
+        script: |
+          flutter create --org app.durian7111 --project-name apple315 .
       - name: Get Flutter packages
         script: flutter pub get
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
       - name: Build iOS IPA
         script: |
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
+          flutter build ipa --release --no-codesign
+          xcode-project build-ipa --workspace ios/Runner.xcworkspace --scheme Runner
     artifacts:
       - build/ios/ipa/*.ipa
+      - '**/*.ipa'
     publishing:
       email:
         recipients:
