@@ -6,7 +6,7 @@ workflows:
     environment:
       ios_signing:
         distribution_type: ad_hoc
-        bundle_identifier: com.durian711.apple315
+        bundle_identifier: app.durian7111.apple315
       flutter: stable
       xcode: latest
       cocoapods: default
